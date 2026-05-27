@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "brian-local-plugins",
+  "description": "Local plugin development marketplace",
+  "owner": {
+    "name": "Brian Connelly",
+    "email": "bjbb.connelly@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "sdlc",
+      "description": "Autonomous SDLC workflow: drives a feature from requirements to verified implementation through a cascade of constrained artifacts.",
+      "author": {
+        "name": "Brian Connelly"
+      },
+      "category": "development",
+      "source": {
+        "source": "path",
+        "path": "plugins/sdlc"
+      }
+    }
+  ]
+}

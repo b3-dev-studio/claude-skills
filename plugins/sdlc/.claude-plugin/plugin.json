@@ -1,0 +1,9 @@
+{
+  "name": "sdlc",
+  "version": "0.1.0",
+  "description": "Autonomous SDLC workflow: drives a feature from requirements to verified implementation through a cascade of constrained artifacts. Each phase produces a structured document gated by a validator before the next phase begins.",
+  "author": {
+    "name": "Brian Connelly",
+    "email": "bjbb.connelly@gmail.com"
+  }
+}
