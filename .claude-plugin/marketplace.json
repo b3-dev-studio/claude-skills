@@ -15,8 +15,10 @@
       },
       "category": "development",
       "source": {
-        "source": "path",
-        "path": "plugins/sdlc"
+        "source": "git-subdir",
+        "url": "file:///Users/brian/dev/claude-skills",
+        "path": "plugins/sdlc",
+        "ref": "master"
       }
     }
   ]
