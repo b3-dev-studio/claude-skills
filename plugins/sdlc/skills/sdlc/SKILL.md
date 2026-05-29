@@ -48,7 +48,35 @@ All run artifacts live in `.sdlc/current/`. Create the directory if it does not 
 
 **Context:** Standing context only.
 
-**Actions:**
+**Input detection — run this first:**
+
+Check whether `$ARGUMENTS` is a path to an approved Product Brief:
+- If `$ARGUMENTS` ends in `.md` and the path contains `briefs/` → **Brief path** (see below)
+- Otherwise → **Free-text path** (see below)
+
+---
+
+### Brief Path — bootstrapping from a Product Brief
+
+1. Read the file at `$ARGUMENTS`.
+2. Check the frontmatter field `status`. If it is not `approved`, halt immediately and tell the user:
+   > "This brief has status `<status>`. Only briefs with `status: approved` can be used as SDLC input. Edit the brief's frontmatter to set `status: approved` when ready."
+3. Extract these fields from the brief to seed the spec:
+   - `## Opportunity Statement` → one-sentence feature description (becomes the spec preamble)
+   - `## Success Criteria` → acceptance criteria; convert each numbered criterion to `Given / When / Then` form
+   - `## Scope / In Scope` → drives the functional requirement boundaries
+   - `## Scope / Out of Scope` → paste directly into spec's Out of Scope section
+   - `## PRODUCT.md Goals Served` → check `PRODUCT.md` for any quantitative metrics on those goals; use them as NFR candidates
+   - `suggested-blueprint` frontmatter → hold for Phase 2 (do not discard)
+4. Create a TodoWrite list covering all phases.
+5. Check `.sdlc/vocabulary.md`. All requirement statements must use canonical terms.
+6. Write `.sdlc/current/spec.md` using the spec template, pre-populated from the brief. Open Questions must be empty — the brief approval is the requirements sign-off.
+7. Present the spec to the user with a note that it was bootstrapped from the brief. **Wait for explicit approval before running the gate.**
+
+---
+
+### Free-text Path — bootstrapping from a feature description
+
 1. Create a TodoWrite list covering all phases.
 2. Parse `$ARGUMENTS`. If the feature is vague, ask:
    - What problem does this solve?
@@ -62,6 +90,8 @@ All run artifacts live in `.sdlc/current/`. Create the directory if it does not 
    - Out of Scope must contain at least one explicit exclusion
    - Open Questions must be empty
 5. Present the spec to the user. **Wait for explicit approval before running the gate.**
+
+---
 
 **Gate — Spec → Architecture:**
 Run the artifact-validator agent:
@@ -82,7 +112,9 @@ On violations: fix and re-run. Do not proceed until `gate_status: passed`.
 **Context:** Standing context + `spec.md`.
 
 **Actions:**
-1. Infer the feature type from `spec.md`. Common types: `rest-api-resource`, `background-worker`, `oauth-integration`, `event-driven-handler`, `cache-layer`, `plugin-extension-point`.
+1. Determine the feature type:
+   - If Phase 1 used the **Brief path**: use the `suggested-blueprint` field from the brief as the feature type. Treat it as the starting candidate — verify it still fits after reading `spec.md`.
+   - Otherwise: infer the feature type from `spec.md`. Common types: `rest-api-resource`, `background-worker`, `oauth-integration`, `event-driven-handler`, `cache-layer`, `claude-code-plugin`.
 2. Check `.sdlc/bootstraps/` for a matching bootstrap (filename = feature type).
    - **Bootstrap found:** Load it. Skip to Phase 3. No exploration needed.
    - **No bootstrap:** Check `.sdlc/blueprints/` for a matching blueprint.

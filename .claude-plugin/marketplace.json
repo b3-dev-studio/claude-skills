@@ -8,6 +8,20 @@
   },
   "plugins": [
     {
+      "name": "pm",
+      "description": "Product management skill: audits the codebase against product goals, scans the competitive landscape, synthesizes ranked opportunities, and produces Product Briefs that feed into the /sdlc skill.",
+      "author": {
+        "name": "Brian Connelly"
+      },
+      "category": "development",
+      "source": {
+        "source": "git-subdir",
+        "url": "file:///Users/brian/dev/claude-skills",
+        "path": "plugins/pm",
+        "ref": "master"
+      }
+    },
+    {
       "name": "sdlc",
       "description": "Autonomous SDLC workflow: drives a feature from requirements to verified implementation through a cascade of constrained artifacts.",
       "author": {

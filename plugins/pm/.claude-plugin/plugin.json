@@ -1,0 +1,9 @@
+{
+  "name": "pm",
+  "version": "0.1.0",
+  "description": "Product management skill: audits the codebase against product goals, scans the competitive landscape, synthesizes ranked opportunities, and produces Product Briefs that feed into the /sdlc skill.",
+  "author": {
+    "name": "Brian Connelly",
+    "email": "bjbb.connelly@gmail.com"
+  }
+}
