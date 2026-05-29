@@ -1,13 +1,64 @@
 ---
 name: sdlc
 description: "Full autonomous SDLC workflow. Use when the user wants to build a new feature end-to-end: from requirements through architecture, implementation, and verification. Each phase produces a structured artifact that gates entry to the next — no phase begins until the previous artifact passes its validator."
-argument-hint: <feature description>
-allowed-tools: [Read, Write, Edit, Bash, Glob, Grep, TodoWrite, Agent]
+argument-hint: "<feature description or brief path> [--auto [--interval=<duration>]]"
+allowed-tools: [Read, Write, Edit, Bash, Glob, Grep, TodoWrite, Agent, Skill]
 ---
 
 # Autonomous SDLC
 
 Drive a feature from requirements to verified implementation through a cascade of constrained artifacts. Each phase produces a structured markdown document. A validator checks the document against a gate checklist before the next phase begins. The model's degrees of freedom narrow at each step: the spec constrains the architecture, the architecture constrains the contract, the contract constrains the implementation.
+
+---
+
+## Argument Parsing
+
+Parse `$ARGUMENTS` before any other step.
+
+0. If `--help` is present, print the following and stop:
+
+   ```
+   Usage: /sdlc <feature description or brief path> [flags]
+
+   Flags:
+     --auto              Skip approval gates and run phases autonomously.
+                         Each phase writes its artifact, passes its gate, then stops.
+                         The next phase is scheduled automatically.
+     --interval=<dur>    Delay between scheduled phases (e.g. 30m, 2h). Default: 30m.
+                         Only applies when --auto is set.
+
+   Modes:
+     (no flags)          Adhoc — pauses at each phase gate for your review and approval.
+     --auto              Auto — phases run and schedule themselves; no approval prompts.
+     --auto --interval   Auto with delay — each phase schedules the next after <dur>.
+
+   Phase schedule (auto mode):
+     Run 1  Phase 1  Spec
+     Run 2  Phase 2  Blueprint + Phase 3 Architecture
+     Run 3  Phase 4  Contract
+     Run 4  Phase 5  Implementation + Phase 6 Verification + Phase 7 Close Out
+
+   Resume detection:
+     Re-running /sdlc automatically resumes from the last completed phase gate.
+     Artifacts are read from .sdlc/current/.
+
+   Examples:
+     /sdlc add rate limiting to the API
+     /sdlc .sdlc/briefs/rate-limiting.md
+     /sdlc add rate limiting --auto
+     /sdlc add rate limiting --auto --interval=1h
+   ```
+
+1. Detect flags:
+   - `--auto` present → `mode = auto`
+   - `--auto` absent → `mode = adhoc`
+   - `--interval=<duration>` present → `schedule_interval = <duration>` (e.g., `30m`, `2h`)
+   - `--interval` absent when `mode = auto` → `schedule_interval = 30m`
+2. Strip all flags from `$ARGUMENTS`. The remaining text is `feature_input` (a brief path or free-text description).
+
+**Adhoc mode** (default): approval gates pause execution and wait for explicit user input before proceeding. The full pipeline runs in a single session.
+
+**Auto mode**: approval gates are skipped. After each phase's gate passes, the next phase is scheduled via the `schedule` skill and this run stops. Artifacts on disk serve as the handoff — resume detection (Phase 0) picks up where the previous run left off.
 
 ---
 
@@ -42,6 +93,21 @@ All run artifacts live in `.sdlc/current/`. Create the directory if it does not 
 
 ---
 
+## Phase 0: Resume Detection
+
+Before starting Phase 1, check the `gate_status` frontmatter field in existing artifacts to determine where to resume.
+
+| Condition | Resume at |
+|-----------|-----------|
+| `.sdlc/current/contract.md` has `gate_status: passed` | Phase 5 (Implementation) |
+| `.sdlc/current/arch.md` has `gate_status: passed` | Phase 4 (Contract) |
+| `.sdlc/current/spec.md` has `gate_status: passed` | Phase 2 (Blueprint Selection) |
+| No artifacts exist, or none have `gate_status: passed` | Phase 1 (Spec) — fresh run |
+
+If resuming, load the existing artifacts into working memory. Do not regenerate them.
+
+---
+
 ## Phase 1: Spec
 
 **Goal:** Produce a fully specified, unambiguous requirements document.
@@ -50,15 +116,15 @@ All run artifacts live in `.sdlc/current/`. Create the directory if it does not 
 
 **Input detection — run this first:**
 
-Check whether `$ARGUMENTS` is a path to an approved Product Brief:
-- If `$ARGUMENTS` ends in `.md` and the path contains `briefs/` → **Brief path** (see below)
+Check whether `feature_input` is a path to an approved Product Brief:
+- If `feature_input` ends in `.md` and the path contains `briefs/` → **Brief path** (see below)
 - Otherwise → **Free-text path** (see below)
 
 ---
 
 ### Brief Path — bootstrapping from a Product Brief
 
-1. Read the file at `$ARGUMENTS`.
+1. Read the file at `feature_input`.
 2. Check the frontmatter field `status`. If it is not `approved`, halt immediately and tell the user:
    > "This brief has status `<status>`. Only briefs with `status: approved` can be used as SDLC input. Edit the brief's frontmatter to set `status: approved` when ready."
 3. Extract these fields from the brief to seed the spec:
@@ -71,14 +137,14 @@ Check whether `$ARGUMENTS` is a path to an approved Product Brief:
 4. Create a TodoWrite list covering all phases.
 5. Check `.sdlc/vocabulary.md`. All requirement statements must use canonical terms.
 6. Write `.sdlc/current/spec.md` using the spec template, pre-populated from the brief. Open Questions must be empty — the brief approval is the requirements sign-off.
-7. Present the spec to the user with a note that it was bootstrapped from the brief. **Wait for explicit approval before running the gate.**
+7. **Adhoc mode only:** Present the spec to the user with a note that it was bootstrapped from the brief. Wait for explicit approval before running the gate.
 
 ---
 
 ### Free-text Path — bootstrapping from a feature description
 
 1. Create a TodoWrite list covering all phases.
-2. Parse `$ARGUMENTS`. If the feature is vague, ask:
+2. Parse `feature_input`. If the feature is vague, ask:
    - What problem does this solve?
    - Who uses it and how?
    - What are the hard constraints (performance, security, backward compatibility)?
@@ -89,7 +155,7 @@ Check whether `$ARGUMENTS` is a path to an approved Product Brief:
    - Each NFR gets an ID: NF1, NF2… — and a concrete measurable metric
    - Out of Scope must contain at least one explicit exclusion
    - Open Questions must be empty
-5. Present the spec to the user. **Wait for explicit approval before running the gate.**
+5. **Adhoc mode only:** Present the spec to the user. Wait for explicit approval before running the gate.
 
 ---
 
@@ -102,6 +168,10 @@ checks: spec gate checklist (see spec template)
 On violations: fix and re-run. Do not proceed until `gate_status: passed`.
 
 **Scope lock:** Once this gate passes, the spec is frozen. Any downstream phase that needs to add or remove scope must emit a Scope Change Request and return here.
+
+**Continuation after gate passes:**
+- **Adhoc mode:** Proceed to Phase 2.
+- **Auto mode:** Invoke the `schedule` skill to run `/sdlc --auto --interval={{schedule_interval}}` in `{{schedule_interval}}`. Notify the user: "Phase 1 (Spec) complete. Phase 2 (Blueprint) + Phase 3 (Architecture) scheduled in {{schedule_interval}}." Stop.
 
 ---
 
@@ -138,7 +208,7 @@ On violations: fix and re-run. Do not proceed until `gate_status: passed`.
 2. Read all key files the agent identifies before writing the arch doc.
 3. Cross-check every component interface against the decision log. A component that contradicts a standing decision is a blocker — surface it to the user before proceeding.
 4. Write `.sdlc/current/arch.md` using the arch template.
-5. Present to the user. **Wait for explicit approval.**
+5. **Adhoc mode only:** Present to the user. Wait for explicit approval.
 
 **Gate — Architecture → Contract:**
 Run the artifact-validator agent:
@@ -148,6 +218,10 @@ cross-reference: .sdlc/current/spec.md
 checks: arch gate checklist (see arch template)
 ```
 On violations: fix and re-run. Do not proceed until `gate_status: passed`.
+
+**Continuation after gate passes:**
+- **Adhoc mode:** Proceed to Phase 4.
+- **Auto mode:** Invoke the `schedule` skill to run `/sdlc --auto --interval={{schedule_interval}}` in `{{schedule_interval}}`. Notify the user: "Phase 3 (Architecture) complete. Phase 4 (Contract) scheduled in {{schedule_interval}}." Stop.
 
 ---
 
@@ -164,7 +238,7 @@ On violations: fix and re-run. Do not proceed until `gate_status: passed`.
 2. Map every acceptance criterion ID to at least one test case in the Test Plan table.
 3. Populate Forbidden from the arch's constraints and the decision log.
 4. Write `.sdlc/current/contract.md` using the contract template.
-5. Present to the user. **Wait for explicit approval.**
+5. **Adhoc mode only:** Present to the user. Wait for explicit approval.
 
 **Gate — Contract → Implementation:**
 Run the artifact-validator agent:
@@ -175,13 +249,17 @@ checks: contract gate checklist (see contract template)
 ```
 On violations: fix and re-run. Do not proceed until `gate_status: passed`.
 
+**Continuation after gate passes:**
+- **Adhoc mode:** Proceed to Phase 5.
+- **Auto mode:** Invoke the `schedule` skill to run `/sdlc --auto --interval={{schedule_interval}}` in `{{schedule_interval}}`. Notify the user: "Phase 4 (Contract) complete. Phase 5 (Implementation) scheduled in {{schedule_interval}}." Stop.
+
 ---
 
 ## Phase 5: Implementation
 
 **Goal:** Write code that conforms exactly to the contract, with consistent behavior across all files.
 
-**DO NOT START WITHOUT EXPLICIT USER APPROVAL.**
+**Adhoc mode only:** Do not start without explicit user approval.
 
 **Setup — run once before writing any file:**
 1. Extract a **cross-cutting brief** from `CLAUDE.md` and the bootstrap covering behavioral patterns only: error handling, logging, transaction boundaries, null/undefined treatment, naming conventions at the implementation level. Hold this for the entire phase — do not re-read `CLAUDE.md` per file.
