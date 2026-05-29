@@ -290,6 +290,29 @@ On violations: fix and re-run. Do not proceed until `gate_status: passed`.
 
 ---
 
+### Part 2: Test Implementation
+
+Run after all production files are written. Do not interleave with Part 1 — test files often import from multiple production files, and all dependencies must exist before tests can run.
+
+**Context to load:** Test Plan table from `contract.md` + spec acceptance criteria section (for Given/When/Then assertions).
+
+**Per test file:**
+
+1. Collect all Test Plan rows whose `File` column names this test file.
+2. Write the test file. For each row:
+   - Use the `Description` (Arrange/Act/Assert) as the spec for the test body.
+   - Map the `Covers` AC ID to the corresponding `Given / When / Then` in the spec — use it to write precise assertions.
+3. Run the test file. Record pass/fail per Test ID.
+4. If any test fails:
+   - Diagnose: is the failure in the test (wrong assertion) or the production file (wrong behavior)?
+   - Fix accordingly and re-run.
+   - Do not move to the next test file until all tests in this file pass.
+5. Append results to the running summary:
+   `T{{ID}} {{TestFile}} — {{pass|fail}}{{#fail}}: {{one-sentence diagnosis}}{{/fail}}`
+6. Update TodoWrite as each test file is completed.
+
+---
+
 ## Phase 6: Verification
 
 **Goal:** Confirm every acceptance criterion passes and the implementation conforms to the contract.

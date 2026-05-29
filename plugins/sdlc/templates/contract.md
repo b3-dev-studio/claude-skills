@@ -67,11 +67,11 @@ export function {{newMethod}}({{param}}: {{Type}}): {{ReturnType}}
 ## Test Plan
 | Test ID | Covers    | File | Description |
 |---------|-----------|------|-------------|
-| T1      | F1.AC1    | `{{file.test.ts}}` | {{What this test exercises}} |
-| T2      | F1.AC2    | `{{file.test.ts}}` | {{What this test exercises}} |
-| T3      | F2.AC1    | `{{file.test.ts}}` | {{What this test exercises}} |
+| T1      | F1.AC1    | `{{file.test.ts}}` | {{Arrange: {{preconditions}}. Act: call {{function/method}} with {{inputs}}. Assert: {{expected return value or side effect and its type}}.}} |
+| T2      | F1.AC2    | `{{file.test.ts}}` | {{Arrange: {{preconditions}}. Act: call {{function/method}} with {{inputs}}. Assert: {{expected return value or side effect and its type}}.}} |
+| T3      | F2.AC1    | `{{file.test.ts}}` | {{Arrange: {{preconditions}}. Act: call {{function/method}} with {{inputs}}. Assert: {{expected return value or side effect and its type}}.}} |
 
-*Every acceptance criteria ID from the spec must appear in the Covers column.*
+*Every acceptance criteria ID from the spec must appear in the Covers column. Descriptions must be specific enough to write assertions from — "verifies it works" is not acceptable.*
 
 ## Forbidden
 - {{What must not be created, modified, or introduced}}
