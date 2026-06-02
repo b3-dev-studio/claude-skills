@@ -106,6 +106,13 @@ Before starting Phase 1, check the `gate_status` frontmatter field in existing a
 
 If resuming, load the existing artifacts into working memory. Do not regenerate them.
 
+**Branch setup — run immediately after resume detection:**
+- **Fresh run:** Derive a branch slug from `feature_input`:
+  - Lowercase, replace spaces and special characters with hyphens, collapse consecutive hyphens, trim to 50 characters
+  - Branch name: `feature/<slug>`
+  - Run `git checkout -b feature/<slug>`. If the branch already exists, run `git checkout feature/<slug>` instead.
+- **Resuming:** Confirm the current branch is not `main` or `master`. If it is, warn the user that planning artifacts will land on the main branch and ask whether to proceed or create a feature branch first.
+
 ---
 
 ## Phase 1: Spec
