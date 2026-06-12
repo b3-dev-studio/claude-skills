@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "brian-local-plugins",
-  "description": "Local plugin development marketplace",
+  "name": "b3-dev-studio",
+  "description": "b3-dev-studio Claude Code plugins",
   "owner": {
     "name": "Brian Connelly",
     "email": "bjbb.connelly@gmail.com"
@@ -16,7 +16,7 @@
       "category": "development",
       "source": {
         "source": "git-subdir",
-        "url": "file:///Users/brian/dev/claude-skills",
+        "url": "https://github.com/b3-dev-studio/claude-skills.git",
         "path": "plugins/pm",
         "ref": "master"
       }
@@ -30,7 +30,7 @@
       "category": "development",
       "source": {
         "source": "git-subdir",
-        "url": "file:///Users/brian/dev/claude-skills",
+        "url": "https://github.com/b3-dev-studio/claude-skills.git",
         "path": "plugins/sdlc",
         "ref": "master"
       }
