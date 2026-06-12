@@ -2,7 +2,7 @@
 name: sdlc
 description: "Full autonomous SDLC workflow. Use when the user wants to build a new feature end-to-end: from requirements through architecture, implementation, and verification. Each phase produces a structured artifact that gates entry to the next — no phase begins until the previous artifact passes its validator."
 argument-hint: "<feature description or brief path> [--auto [--interval=<duration>]]"
-allowed-tools: [Read, Write, Edit, Bash, Glob, Grep, TodoWrite, Agent, Skill]
+allowed-tools: [Read, Write, Edit, Bash, Glob, Grep, TodoWrite, Agent, Skill, ScheduleWakeup]
 ---
 
 # Autonomous SDLC
@@ -21,18 +21,17 @@ Parse `$ARGUMENTS` before any other step.
    Usage: /sdlc <feature description or brief path> [flags]
 
    Flags:
-     --auto              Skip approval gates and run phases autonomously.
-                         Each phase writes its artifact, passes its gate, then stops.
-                         The next phase is scheduled automatically.
-     --interval=<dur>    Delay between scheduled phases (e.g. 30m, 2h). Default: 30m.
-                         Only applies when --auto is set.
+     --auto              Skip approval gates and run all phases in a single session.
+                         With --interval, splits into multiple runs paced by ScheduleWakeup.
+     --interval=<dur>    Pause between phase groups (e.g. 30m, 2h). Requires --auto.
+                         When set, invoke /sdlc via /loop so ScheduleWakeup can resume it.
 
    Modes:
      (no flags)          Adhoc — pauses at each phase gate for your review and approval.
-     --auto              Auto — phases run and schedule themselves; no approval prompts.
-     --auto --interval   Auto with delay — each phase schedules the next after <dur>.
+     --auto              Auto, single session — skips gates and runs all phases back-to-back.
+     --auto --interval   Auto, paced — each phase group calls ScheduleWakeup; requires /loop.
 
-   Phase schedule (auto mode):
+   Phase groups (auto --interval mode):
      Run 1  Phase 1  Spec
      Run 2  Phase 2  Blueprint + Phase 3 Architecture
      Run 3  Phase 4  Contract
@@ -46,19 +45,24 @@ Parse `$ARGUMENTS` before any other step.
      /sdlc add rate limiting to the API
      /sdlc .sdlc/briefs/rate-limiting.md
      /sdlc add rate limiting --auto
-     /sdlc add rate limiting --auto --interval=1h
+     /loop /sdlc add rate limiting --auto --interval=1h
    ```
 
 1. Detect flags:
    - `--auto` present → `mode = auto`
    - `--auto` absent → `mode = adhoc`
-   - `--interval=<duration>` present → `schedule_interval = <duration>` (e.g., `30m`, `2h`)
-   - `--interval` absent when `mode = auto` → `schedule_interval = 30m`
+   - `--interval=<duration>` present → `schedule_interval = <duration>` (e.g., `30m`, `2h`); compute `schedule_interval_seconds`:
+     - Parse the numeric part N and unit U
+     - `m` → `schedule_interval_seconds = N × 60`
+     - `h` → `schedule_interval_seconds = N × 3600`
+   - `--interval` absent → `schedule_interval` is unset (single-session auto run)
 2. Strip all flags from `$ARGUMENTS`. The remaining text is `feature_input` (a brief path or free-text description).
 
 **Adhoc mode** (default): approval gates pause execution and wait for explicit user input before proceeding. The full pipeline runs in a single session.
 
-**Auto mode**: approval gates are skipped. After each phase's gate passes, the next phase is scheduled via the `schedule` skill and this run stops. Artifacts on disk serve as the handoff — resume detection (Phase 0) picks up where the previous run left off.
+**Auto mode, no `--interval`**: approval gates are skipped. Each phase proceeds directly to the next. The full pipeline runs in a single session.
+
+**Auto mode with `--interval`**: approval gates are skipped. After each phase group's gate passes, call `ScheduleWakeup` with `delaySeconds = schedule_interval_seconds`, `prompt = '/sdlc --auto --interval={{schedule_interval}} {{feature_input}}'`, and a descriptive `reason`. This run stops. The next run resumes via Phase 0 resume detection. **Requires the user to invoke `/sdlc` via `/loop`** — ScheduleWakeup only fires in a `/loop` session.
 
 ---
 
@@ -178,7 +182,8 @@ On violations: fix and re-run. Do not proceed until `gate_status: passed`.
 
 **Continuation after gate passes:**
 - **Adhoc mode:** Proceed to Phase 2.
-- **Auto mode:** Invoke the `schedule` skill to run `/sdlc --auto --interval={{schedule_interval}}` in `{{schedule_interval}}`. Notify the user: "Phase 1 (Spec) complete. Phase 2 (Blueprint) + Phase 3 (Architecture) scheduled in {{schedule_interval}}." Stop.
+- **Auto mode, no `--interval`:** Proceed directly to Phase 2.
+- **Auto mode, `--interval` set:** Call `ScheduleWakeup` with `delaySeconds = {{schedule_interval_seconds}}`, `prompt = '/sdlc --auto --interval={{schedule_interval}} {{feature_input}}'`, `reason = 'Phase 1 (Spec) complete; Phase 2+3 in {{schedule_interval}}'`. Notify the user: "Phase 1 (Spec) complete. Phase 2 (Blueprint) + Phase 3 (Architecture) scheduled in {{schedule_interval}}." Stop.
 
 ---
 
@@ -228,7 +233,8 @@ On violations: fix and re-run. Do not proceed until `gate_status: passed`.
 
 **Continuation after gate passes:**
 - **Adhoc mode:** Proceed to Phase 4.
-- **Auto mode:** Invoke the `schedule` skill to run `/sdlc --auto --interval={{schedule_interval}}` in `{{schedule_interval}}`. Notify the user: "Phase 3 (Architecture) complete. Phase 4 (Contract) scheduled in {{schedule_interval}}." Stop.
+- **Auto mode, no `--interval`:** Proceed directly to Phase 4.
+- **Auto mode, `--interval` set:** Call `ScheduleWakeup` with `delaySeconds = {{schedule_interval_seconds}}`, `prompt = '/sdlc --auto --interval={{schedule_interval}} {{feature_input}}'`, `reason = 'Phase 3 (Architecture) complete; Phase 4 (Contract) in {{schedule_interval}}'`. Notify the user: "Phase 3 (Architecture) complete. Phase 4 (Contract) scheduled in {{schedule_interval}}." Stop.
 
 ---
 
@@ -258,7 +264,8 @@ On violations: fix and re-run. Do not proceed until `gate_status: passed`.
 
 **Continuation after gate passes:**
 - **Adhoc mode:** Proceed to Phase 5.
-- **Auto mode:** Invoke the `schedule` skill to run `/sdlc --auto --interval={{schedule_interval}}` in `{{schedule_interval}}`. Notify the user: "Phase 4 (Contract) complete. Phase 5 (Implementation) scheduled in {{schedule_interval}}." Stop.
+- **Auto mode, no `--interval`:** Proceed directly to Phase 5.
+- **Auto mode, `--interval` set:** Call `ScheduleWakeup` with `delaySeconds = {{schedule_interval_seconds}}`, `prompt = '/sdlc --auto --interval={{schedule_interval}} {{feature_input}}'`, `reason = 'Phase 4 (Contract) complete; Phase 5–7 (Impl+Verify) in {{schedule_interval}}'`. Notify the user: "Phase 4 (Contract) complete. Phase 5 (Implementation) scheduled in {{schedule_interval}}." Stop.
 
 ---
 
