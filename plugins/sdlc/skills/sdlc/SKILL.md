@@ -195,7 +195,7 @@ On violations: fix and re-run. Do not proceed until `gate_status: passed`.
 
 **Actions:**
 1. Determine the feature type:
-   - If Phase 1 used the **Brief path**: use the `suggested-blueprint` field from the brief as the feature type. Treat it as the starting candidate — verify it still fits after reading `spec.md`.
+   - If Phase 1 used the **Brief path**: use the `suggested-blueprint` field from the brief as the feature type. Treat it as the starting candidate — verify it still fits after reading `spec.md`. If the field is `none` (or the named blueprint clearly doesn't match the spec — check the brief's SDLC Handoff Notes), proceed to Phase 3 without a bootstrap and note this explicitly in the arch doc.
    - Otherwise: infer the feature type from `spec.md`. Common types: `rest-api-resource`, `background-worker`, `oauth-integration`, `event-driven-handler`, `cache-layer`, `claude-code-plugin`.
 2. Check `.sdlc/bootstraps/` for a matching bootstrap (filename = feature type).
    - **Bootstrap found:** Load it. Skip to Phase 3. No exploration needed.
@@ -334,11 +334,12 @@ Run after all production files are written. Do not interleave with Part 1 — te
 **Context:** `contract.md` + spec acceptance criteria only + test output.
 
 **Actions:**
-1. Run the test suite. Record pass/fail per test ID.
+1. Run the **full** test suite (not just this feature's tests). Record pass/fail per test ID, plus the suite's total pass count before vs. after the feature — zero regressions is a gate condition.
 2. For each NFR, capture the measured value against its metric.
 3. For each component, confirm exported signatures match the contract.
-4. Write `.sdlc/current/verification.md` using the verification template.
-5. Document every deviation from the contract with explicit justification. Undocumented deviations block the gate.
+4. **UI wiring not coverable by the project's automated test environment** (e.g. component/hook code excluded from a node-only suite): verify it in a live browser session and record concrete observed evidence in verification.md (what was triggered, what rendered/changed). Temporary verification tooling (e.g. `npm install --no-save playwright`) must be removed afterward — `git diff package.json package-lock.json` must be empty before writing the report.
+5. Write `.sdlc/current/verification.md` using the verification template.
+6. Document every deviation from the contract with explicit justification. Undocumented deviations block the gate.
 
 **Gate — Verification → Done:**
 Run the artifact-validator agent:
@@ -359,10 +360,14 @@ On failures: diagnose, fix, re-run tests, re-run gate. Do not mark done until `g
 1. Append to `.sdlc/decision-log.md`:
    - Any architectural decisions made during this feature, with rationale
    - Any approaches explicitly rejected, and why
+   - Decision IDs must be unique across the whole log: scan the file for the highest existing D-number and continue from there — do not restart numbering per feature.
 2. Append to `.sdlc/vocabulary.md` any new canonical terms introduced.
 3. Confirm the bootstrap (if newly generated) is saved to `.sdlc/bootstraps/`.
-4. Mark all TodoWrite items complete.
-5. Summarise: what was built, key decisions, files modified, suggested next steps.
+4. Archive the run: move `spec.md`, `arch.md`, `contract.md`, and `verification.md` from `.sdlc/current/` to `.sdlc/archive/<feature-slug>/` so the next feature starts with a clean `.sdlc/current/`.
+5. If Phase 1 used the Brief path: update the source brief's frontmatter to `status: implemented`.
+6. Commit the feature on its branch with message `Implement <feature-slug>: <one-line summary>`. Do not merge — merging to main is the human's call.
+7. Mark all TodoWrite items complete.
+8. Summarise: what was built, key decisions, files modified, suggested next steps.
 
 ---
 

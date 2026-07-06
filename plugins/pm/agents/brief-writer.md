@@ -49,7 +49,7 @@ Before filling the template, determine the `suggested-blueprint` value:
    - Third-party OAuth login flow → `oauth-integration`
    - Event-driven processing pipeline → `event-driven-handler`
 3. Use the filename **without the `.md` extension** as the `suggested-blueprint` value.
-4. If no blueprint is a good fit, use the closest match and add a note in `## SDLC Handoff Notes` explaining why it is an approximation and what differs.
+4. If no blueprint is a good fit, set `suggested-blueprint: none` and describe the feature's actual shape in `## SDLC Handoff Notes` (e.g. "self-contained presentational layer + trigger wiring; zero engine changes") so the SDLC arch phase has an anchor. Do not force-fit a blueprint whose domain doesn't match — a mislabeled blueprint misleads more than no blueprint.
 
 ---
 
@@ -98,7 +98,7 @@ The file must:
 - Use the frontmatter structure from the product-brief template
 - Contain all required sections with real content (no unfilled placeholders)
 - Have `status: pending` in frontmatter
-- Have `suggested-blueprint` set to a known blueprint name from `plugins/sdlc/blueprints/`
+- Have `suggested-blueprint` set to a known blueprint name from `plugins/sdlc/blueprints/`, or `none` with the feature's shape described in SDLC Handoff Notes
 
 ---
 
@@ -109,4 +109,4 @@ The file must:
 - **All required sections must be populated.** No placeholders, no blank sections.
 - **Success criteria must be testable** — measurable or binary (F5.AC3).
 - **Write only to `.sdlc/briefs/<slug>.md`.** Do not write to any other path (NF3).
-- **`suggested-blueprint` must be a known name** from `plugins/sdlc/blueprints/`. If approximating, explain in SDLC Handoff Notes (NF2).
+- **`suggested-blueprint` must be a known name** from `plugins/sdlc/blueprints/` or `none`. If `none`, describe the feature's shape in SDLC Handoff Notes (NF2).

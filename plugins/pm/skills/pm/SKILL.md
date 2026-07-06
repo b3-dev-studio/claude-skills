@@ -84,6 +84,8 @@ Load these once at startup. Hold in working memory for the entire run.
 | `PRODUCT.md` (project root) | Product vision, goals, success metrics, constraints |
 | `.sdlc/pm-ideas.md` (if exists) | Human-provided ideas for evaluation |
 | `.sdlc/decision-log.md` (if exists) | Architectural decisions — passed to the product auditor |
+| `.sdlc/briefs/` filenames + each brief's `opportunity-title` and `status` frontmatter (if any exist) | Prior briefs — used by the synthesizer and Step 5 to avoid re-proposing opportunities already briefed or implemented |
+| Last 2 cycle summaries in `.sdlc/pm-log.md` (if exists) | What recent cycles already found, so findings aren't recycled |
 
 ---
 
@@ -140,6 +142,7 @@ Invoke the `opportunity-synthesizer` agent with:
 - `audit-report`: full Step 1 output
 - `competitive-landscape`: full Step 2 output
 - `human-ideas`: the list from Startup Check 2 (may be empty)
+- `prior-briefs`: the list of existing brief titles and statuses from Standing Context (may be empty) — instruct the synthesizer to exclude opportunities substantially covered by an existing brief of any status
 - `focus`: forwarded from arguments if provided
 
 Receive:
@@ -195,7 +198,9 @@ date: <ISO 8601 date>
 
 ### Step 5 — Brief Generation
 
-For each selected opportunity, invoke the `brief-writer` agent once with:
+**Dedup check first:** for each selected opportunity, compare against the `prior-briefs` list. If an existing brief in `.sdlc/briefs/` already covers substantially the same opportunity, skip it and note the skip (with the existing brief's filename) in the cycle summary instead of writing a duplicate.
+
+For each remaining selected opportunity, invoke the `brief-writer` agent once with:
 - `opportunity`: the selected ranked-opportunity entry
 - `product-context`: PRODUCT.md content
 - `audit-report`: full Step 1 output

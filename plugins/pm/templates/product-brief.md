@@ -4,8 +4,8 @@ opportunity-title: <string>
 category: <gap | improvement | moonshot>
 impact: <high | medium | low>
 effort: <high | medium | low>
-suggested-blueprint: <name matching plugins/sdlc/blueprints/ filename without .md extension>
-source: <synthesized | human-sourced>
+suggested-blueprint: <name matching plugins/sdlc/blueprints/ filename without .md extension, or "none" when no blueprint genuinely fits — do not force-fit>
+source: <synthesized | human-sourced | reference to the originating document, e.g. "game-review (GAME_REVIEW.md, <date>)">
 ---
 
 # Product Brief: <opportunity-title>
